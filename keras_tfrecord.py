@@ -4,8 +4,10 @@ from keras import backend as K
 from keras.backend import tf
 from keras import callbacks as cbks
 import numpy as np
+import six
 from keras import optimizers, objectives
-from keras.engine.training import collect_metrics, weighted_objective
+# from keras.engine.training import collect_metrics, weighted_objective
+from keras.engine.training import _collect_metrics
 from keras import metrics as metrics_module
 
 
@@ -56,7 +58,8 @@ def read_and_decode(filename, one_hot=True, n_class=None, is_train=None):
 
     img = tf.cast(img, tf.float32) * (1. / 255) - 0.5
     # img = tf.cast(img, tf.float32) * (1. / 255)
-
+    # debug
+    # print "Read a record in read_and_decode()."
 
     label = tf.cast(features['label'], tf.int32)
     if one_hot and n_class:
@@ -125,7 +128,7 @@ def compile_tfrecord(train_model, optimizer, loss, out_tensor_lst, metrics=[], l
         loss_function = objectives.get(loss)
         loss_functions = [loss_function for _ in range(len(train_model.outputs))]
     train_model.loss_functions = loss_functions
-    weighted_losses = [weighted_objective(fn) for fn in loss_functions]
+    # weighted_losses = [weighted_objective(fn) for fn in loss_functions]
 
     
     # prepare metrics
@@ -158,7 +161,7 @@ def compile_tfrecord(train_model, optimizer, loss, out_tensor_lst, metrics=[], l
 
     # list of same size as output_names.
     # contains tuples (metrics for output, names of metrics)
-    nested_metrics = collect_metrics(metrics, train_model.output_names)
+    nested_metrics = _collect_metrics(metrics, train_model.output_names)
 
     def append_metric(layer_num, metric_name, metric_tensor):
         """Helper function, used in loop below"""
@@ -269,11 +272,12 @@ def fit_tfrecord(train_model, nb_train_sample, batch_size, nb_epoch=10, verbose=
     callbacks.set_model(callback_model)
     callbacks.set_params({
         'batch_size': batch_size,
-        'nb_epoch': nb_epoch,
-        'nb_sample': nb_train_sample,
+        'epochs': nb_epoch,
+        'samples': nb_train_sample,
         'verbose': verbose,
         'do_validation': False,
-        'metrics': callback_metrics or [],
+        # 'metrics': callback_metrics or [],
+        'metrics': ['accuracy']
     })
     callbacks.on_train_begin()
     callback_model.stop_training = False
