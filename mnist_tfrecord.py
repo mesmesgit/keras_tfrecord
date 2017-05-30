@@ -4,7 +4,7 @@ from keras.datasets import mnist
 from keras import backend as K
 
 from keras.models import Model
-from keras.layers import Dense, Dropout, Flatten, Input, Convolution2D
+from keras.layers import Dense, Dropout, Flatten, Input, Conv2D
 from keras.callbacks import EarlyStopping
 from keras.objectives import categorical_crossentropy
 from keras.utils import np_utils
@@ -24,8 +24,12 @@ X_train = X_train[..., np.newaxis]
 X_test = X_test[..., np.newaxis]
 
 def arch(inp):
-  con1 = Convolution2D(32, 3, 3, border_mode='valid', activation = 'relu', subsample=(2,2))
-  con2 = Convolution2D(32, 3, 3, activation = 'relu', subsample=(2,2))
+  # con1 = Convolution2D(32, 3, 3, border_mode='valid', activation = 'relu', subsample=(2,2))
+  # con2 = Convolution2D(32, 3, 3, activation = 'relu', subsample=(2,2))
+  # changes for Keras 2 API
+  con1 = Conv2D(32, (3, 3), padding="valid", strides=(2, 2), activation="relu")
+  con2 = Conv2D(32, (3, 3), strides=(2, 2), activation="relu")
+  
   fla1 = Flatten()
   den1 = Dense(128, activation = 'relu')
   den2 = Dense(nb_classes, activation = 'softmax')
@@ -39,6 +43,8 @@ def arch(inp):
 
   return out 
 
+# debug
+# print "y_train shape is: ", y_train.shape
 
 ktfr.data_to_tfrecord(images=X_train, labels=y_train, filename='train.mnist.tfrecord')
 # ktfr.data_to_tfrecord(images=X_test, labels=y_test, filename='test.mnist.tfrecord')
@@ -56,7 +62,9 @@ x_train_batch, y_train_batch = K.tf.train.shuffle_batch([x_train_, y_train_],
 
 x_train_inp = Input(tensor=x_train_batch)
 train_out = arch(x_train_inp)
-train_model = Model(input=x_train_inp, output=train_out)
+# train_model = Model(input=x_train_inp, output=train_out)
+# changes for Keras 2 API
+train_model = Model(inputs=x_train_inp, outputs=train_out)
 ktfr.compile_tfrecord(train_model, optimizer='rmsprop', loss='categorical_crossentropy', out_tensor_lst=[y_train_batch], metrics=['accuracy'])
 
 train_model.summary()
@@ -72,7 +80,7 @@ K.clear_session()
 
 x_test_inp = Input(batch_shape=(None,)+(X_test.shape[1:]))
 test_out = arch(x_test_inp)
-test_model = Model(input=x_test_inp, output=test_out)
+test_model = Model(inputs=x_test_inp, outputs=test_out)
 test_model.load_weights('saved_wt.h5')
 test_model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 test_model.summary()
